@@ -11,9 +11,10 @@ class Reader:
 
     def SkipBytes(self, offset: int) -> None:
         """
-        **Move relative to the current position by `offset` bytes**
-    
-        * `offset`: Number of bytes to move
+        ### **Move relative to the current position by `offset` bytes**
+
+        ---
+        * `offset`: Number of bytes to move file head
         """
 
         self.file.seek(offset, 1)

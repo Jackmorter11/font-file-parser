@@ -198,11 +198,68 @@ class ParseTTF:
 
 
     def ReadCmapTable(self):
+        self.mappings = {}
+
         version = self.reader.ReadUInt16()
         numSubtables = self.reader.ReadUInt16() # Font can contain multiple charicter maps for different platforms
 
-        cmapSubtableOffset = 0
+        # Read through metadata for each charicter map to find the one we want to use
+        cmapSubtableOffset = 0xFFFFFFFF # Hopefuly equivilant to uint.MaxValue in C
+
+        for _ in range(numSubtables):
+            platformID = self.reader.ReadUInt16()
+            platformSpecificID = self.reader.ReadUInt16()
+            offset = self.reader.ReadUInt32()
+ 
+            # PlatformID of 0 means Unicode, in which case platformSpecificID can be interpreted as Unicode version
+            if platformID == 0:
+                unicodeVersionInfo = platformSpecificID
+ 
+                # Unicode 2.0 or later semantics (non-BMP charicters allowed)
+                if unicodeVersionInfo == 4:
+                    cmapSubtableOffset = offset
+ 
+                # Unicode 2.0 or later semantics (BMP only)
+                if unicodeVersionInfo == 3 and cmapSubtableOffset == 0xFFFFFFFF:
+                    cmapSubtableOffset = offset
         
+        if cmapSubtableOffset == 0:
+            raise NotImplementedError("TODO: Font does not contain supported charicter map type")
+        
+        
+        
+        self.reader.goto(self.tables["cmap"]["offset"] + cmapSubtableOffset)
+        format = self.reader.ReadUInt16()
+
+        if format == 12:
+            self.ReadCmapFormat12()
+        
+        else:
+            raise NotImplementedError(f"TODO: Cmap format {format} not supported")
+        
+    def ReadCmapFormat12(self):
+        reserved = self.reader.ReadUInt16() # Set to 0
+        subtableByteLengthIncludingHeader = self.reader.ReadUInt32()
+        languageCode = self.reader.ReadUInt32() # Set to 0
+        numGroups = self.reader.ReadUInt32()
+
+
+        for _ in range(numGroups):
+            startCharCode = self.reader.ReadUInt32()
+            endCharCode = self.reader.ReadUInt32()
+            startGlyphIndex = self.reader.ReadUInt32()
+
+            numChars = endCharCode - startCharCode + 1
+
+            for charCodeOffset in range(numChars):
+                charCode = startCharCode + charCodeOffset
+                glyphIndex = startGlyphIndex + charCodeOffset
+
+                self.mappings[charCode] = glyphIndex
+                
+    def CharToGlyphIndex(self, char):
+        charCode = ord(char)
+        return self.mappings[charCode]
 
 
     def ReadGlyfTable(self):
@@ -363,9 +420,10 @@ if __name__ == "__main__":
     fontPath = "fonts/JetBrainsMono/fonts/ttf/JetBrainsMono-Bold.ttf"
     font = ParseTTF(fontPath)
 
-    for i in range(0, 50):
-        print(f"Glyph {i}:")
-        print(font.glyphs[i])
+    glyphIndex = font.CharToGlyphIndex("i")
+
+    print(f"Glyph {glyphIndex}:")
+    print(font.glyphs[glyphIndex])
 
 
 
