@@ -13,11 +13,11 @@ class ParseTTF:
     def __init__(self, fontPath: str, loggingEnabled: bool = False):
         self.fontPath = fontPath
 
-        self.reader = Reader(fontPath)
         self.logger = Logger("logs/TTFParser.log", loggingEnabled=True)
-        
-        self.logger.log("Created reader object\n")
+
         self.reader = Reader(self.fontPath)
+        self.logger.log("Created reader object\n")
+
 
         self.offsetSubTable: offsetSubTable = ReadOffsetSubTable(self.reader)
         self.logger.log("Read Sub Table")
@@ -25,6 +25,7 @@ class ParseTTF:
         self.tables: dict[str, tableDirectory] = ReadTableDirectory(self.reader, self.offsetSubTable.numTables)
         self.logger.log("Read Table Directory\n")
     
+
         self.reader.goto(self.tables['maxp'].offset)
         self.maxp: maxp = ReadMaxpTable(self.reader)
         self.logger.log("Read 'maxp' table")
