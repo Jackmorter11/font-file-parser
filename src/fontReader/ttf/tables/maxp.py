@@ -4,21 +4,21 @@ from ...common.reader import Reader
 
 @dataclass
 class maxp:
-    version               :int = None # NOTE: Might not be int, 4dot4 e.g 1.6 or 4.7
-    numGlyphs             :int = None
-    maxPoints             :int = None
-    maxContours           :int = None
-    maxComponentPoints    :int = None
-    maxComponentContours  :int = None
-    maxZones              :int = None
-    maxTwilightPoints     :int = None
-    maxStorage            :int = None
-    maxFunctionDefs       :int = None
-    maxInstructionDefs    :int = None
-    maxStackElements      :int = None
-    maxSizeOfInstructions :int = None
-    maxComponentElements  :int = None
-    maxComponentDepth     :int = None
+    version               :int = 0 # TODO: Use custom 4dot4 class e.g 1.6 = 0001.0110
+    numGlyphs             :int = 0
+    maxPoints             :int = 0
+    maxContours           :int = 0
+    maxComponentPoints    :int = 0
+    maxComponentContours  :int = 0
+    maxZones              :int = 0
+    maxTwilightPoints     :int = 0
+    maxStorage            :int = 0
+    maxFunctionDefs       :int = 0
+    maxInstructionDefs    :int = 0
+    maxStackElements      :int = 0
+    maxSizeOfInstructions :int = 0
+    maxComponentElements  :int = 0
+    maxComponentDepth     :int = 0
 
 def ReadMaxpTable(reader: Reader) -> maxp:
     """
@@ -52,9 +52,9 @@ def ReadMaxpTable(reader: Reader) -> maxp:
     ```
     """
 
-    table: maxp = maxp()
+    maxpTable: maxp = maxp()
 
     reader.SkipBytes(4) # Version
-    table.numGlyphs = reader.ReadUInt16()
+    maxpTable.numGlyphs = reader.ReadUInt16()
 
-    return table
+    return maxpTable

@@ -1,22 +1,26 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from ...common.reader import Reader
+from .tableDirectory import table
 
 @dataclass
 class cmap:
-    mappings: dict[str, int] = None
+    mappings: dict[int, int] = field(default_factory=dict)
 
-    reserved                          :int = None 
-    subtableByteLengthIncludingHeader :int = None
-    languageCode                      :int = None
-    numGroups                         :int = None
+    reserved                          :int = 0 
+    subtableByteLengthIncludingHeader :int = 0
+    languageCode                      :int = 0
+    numGroups                         :int = 0
 
 
-    def CharToGlyphIndex(self, char):
+    def CharToGlyphIndex(self, char: str):
+        if len(char) != 1:
+            raise ValueError(f"Expected string of length 1, not {len(char)}")
+        
         charCode = ord(char)
         return self.mappings[charCode]
 
-def ReadCmapTable(reader: Reader) -> cmap:
+def ReadCmapTable(reader: Reader, tables: dict[str, table]) -> cmap:
 
     version = reader.ReadUInt16()
     numSubtables = reader.ReadUInt16() # Font can contain multiple charicter maps for different platforms
@@ -45,17 +49,16 @@ def ReadCmapTable(reader: Reader) -> cmap:
         raise NotImplementedError("TODO: Font does not contain supported charicter map type")
     
     
-    
-    reader.goto(tables["cmap"]["offset"] + cmapSubtableOffset)
+    reader.goto(tables["cmap"].offset + cmapSubtableOffset)
     format = reader.ReadUInt16()
 
     if format == 12:
-        ReadCmapFormat12()
+        return ReadCmapFormat12(reader)
     
     else:
         raise NotImplementedError(f"TODO: Cmap format {format} not supported")
     
-def ReadCmapFormat12(reader: Reader) -> dict[str, int]:
+def ReadCmapFormat12(reader: Reader) -> cmap:
     """"""
 
     table: cmap = cmap()
@@ -76,6 +79,6 @@ def ReadCmapFormat12(reader: Reader) -> dict[str, int]:
             charCode = startCharCode + charCodeOffset
             glyphIndex = startGlyphIndex + charCodeOffset
 
-            mappings[charCode] = glyphIndex
+            table.mappings[charCode] = glyphIndex
     
     return table

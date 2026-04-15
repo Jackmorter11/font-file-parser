@@ -4,23 +4,23 @@ from ...common.reader import Reader
 
 @dataclass
 class head:
-    version            :int = None
-    fontRevision       :int = None
-    checkSumAdjustment :int = None
-    magicNumber        :int = None
-    flags              :int = None
-    unitsPerEm         :int = None
-    created            :int = None # LongDateTime
-    modified           :int = None # LongDateTime
-    xMin               :int = None # FWord
-    yMin               :int = None # FWord
-    xMax               :int = None # FWord
-    yMax               :int = None # FWord
-    macStyle           :int = None
-    lowestRecPPEM      :int = None
-    fontDirectionHint  :int = None
-    indexToLocFormat   :int = None
-    glyphDataFormat    :int = None
+    version            :int = 0
+    fontRevision       :int = 0
+    checkSumAdjustment :int = 0
+    magicNumber        :int = 0
+    flags              :int = 0
+    unitsPerEm         :int = 0
+    created            :int = 0 # TODO: Use custom LongDateTime class
+    modified           :int = 0 # TODO: Use custom LongDateTime class
+    xMin               :int = 0 # TODO: Use custom FWord class
+    yMin               :int = 0 # TODO: Use custom FWord class
+    xMax               :int = 0 # TODO: Use custom FWord class
+    yMax               :int = 0 # TODO: Use custom FWord class
+    macStyle           :int = 0
+    lowestRecPPEM      :int = 0
+    fontDirectionHint  :int = 0
+    indexToLocFormat   :int = 0
+    glyphDataFormat    :int = 0
 
 def ReadHeadTable(reader: Reader) -> head:
     """
@@ -94,9 +94,9 @@ def ReadHeadTable(reader: Reader) -> head:
     ```
     """
 
-    table: head = head()
+    headTable: head = head()
 
     reader.SkipBytes(50)
-    table.indexToLocFormat = reader.ReadInt16()
+    headTable.indexToLocFormat = reader.ReadInt16()
 
-    return table
+    return headTable

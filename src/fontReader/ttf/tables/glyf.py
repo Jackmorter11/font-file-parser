@@ -2,18 +2,18 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 from ...common.reader import Reader
-from ..tables.tableDirectory import tableDirectory
+from ..tables.tableDirectory import table
 
 @dataclass
 class point:
-    x       :float = None
-    y       :float = None
-    onCurve :bool  = None
+    x       :float = 0
+    y       :float = 0
+    onCurve :bool  = False
 
 @dataclass
 class glyph:
-    numberOfContours :int         = None
-    numPoints        :int         = None
+    numberOfContours :int         = 0
+    numPoints        :int         = 0
     endPtsOfContours :list[int]   = field(default_factory=list)
     points           :list[point] = field(default_factory=list)
 
@@ -27,7 +27,8 @@ class glyph:
         
         return string
 
-def ReadGlyfTable(reader: Reader, indexToLocFormat: int, tables: dict[str, tableDirectory], numGlyphs: int) -> list[glyph]:
+
+def ReadGlyfTable(reader: Reader, indexToLocFormat: int, tables: dict[str, table], numGlyphs: int) -> list[glyph]:
     isTwoByteEntery: bool = indexToLocFormat == 0
     locaTableStart = tables["loca"].offset
     glyphTableStart = tables["glyf"].offset
@@ -174,8 +175,9 @@ def ReadCoordinates(reader: Reader, allFlags: list[bytes], readingX: bool) -> tu
 
     return coordinates, onCurves
 
+# TODO: Compound Glyphs
 
-def FlagBitIsSet(flag: bytes, bitIndex: int) -> bool:
+def FlagBitIsSet(flag: bytes, bitIndex: int) -> bool: # TODO: Maybe should be in common
     """
     **Test whether a particular bit in a byte is ON (1) or OFF (0)**
 

@@ -4,11 +4,11 @@ from ...common.reader import Reader
 
 @dataclass
 class offsetSubTable:
-    scalerType    :int = None
-    numTables     :int = None
-    searchRange   :int = None
-    entrySelector :int = None
-    rangeShift    :int = None
+    scalerType    :int = 0
+    numTables     :int = 0
+    searchRange   :int = 0
+    entrySelector :int = 0
+    rangeShift    :int = 0
 
 def ReadOffsetSubTable(reader: Reader) -> offsetSubTable:
     """

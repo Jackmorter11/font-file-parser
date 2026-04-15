@@ -3,12 +3,12 @@ from dataclasses import dataclass
 from ...common.reader import Reader
 
 @dataclass
-class tableDirectory:
-    checkSum :int = None
-    offset   :int = None
-    length   :int = None
+class table:
+    checkSum :int = 0
+    offset   :int = 0
+    length   :int = 0
     
-def ReadTableDirectory(reader: Reader, numTables: int) -> dict[str, tableDirectory]:
+def ReadTableDirectory(reader: Reader, numTables: int) -> dict[str, table]:
     """  
     ## Reads the Table Directory
 
@@ -24,12 +24,12 @@ def ReadTableDirectory(reader: Reader, numTables: int) -> dict[str, tableDirecto
     ```
     """
 
-    tables: dict[str, tableDirectory] = {}
+    tables: dict[str, table] = {}
 
     # Iterate through every table
     for _ in range(numTables):
         tag:    str = reader.ReadStr32()
-        tables[tag] = tableDirectory()
+        tables[tag] = table()
 
         tables[tag].checkSum = reader.ReadUInt32()
         tables[tag].offset   = reader.ReadUInt32()

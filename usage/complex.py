@@ -1,3 +1,5 @@
+"""Finds the glyph with the most points in a certain font"""
+
 from fontReader import ParseFont, ParseTTF
 
 jetBrainsMono = "fonts/JetBrainsMono/fonts/ttf/JetBrainsMono-Bold.ttf"
@@ -6,7 +8,11 @@ notoSansSymbols = "fonts/Noto_Sans_Symbols/static/NotoSansSymbols-Bold.ttf"
 
 font = ParseTTF(notoSansSymbols, loggingEnabled=True)
 
-char = "@" # 我喜欢你
+maxPoints = 0
+mostComplexGlyph = -1
+for i, glyph in enumerate(font.glyphs):
+    if len(glyph.points) > maxPoints:
+        maxPoints = len(glyph.points)
+        mostComplexGlyph = i
 
-glyph = font.glyphs[font.cmap.CharToGlyphIndex(char)]
-print(f"{char} - {glyph}")
+print(font.glyphs[mostComplexGlyph])

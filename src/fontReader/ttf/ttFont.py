@@ -3,11 +3,11 @@ from ..common.glyph  import Glyph
 from ..common.logger import Logger
 
 from .tables.offsetSubTable import offsetSubTable, ReadOffsetSubTable
-from .tables.tableDirectory import tableDirectory, ReadTableDirectory
+from .tables.tableDirectory import table         , ReadTableDirectory
 from .tables.maxp import maxp,  ReadMaxpTable
 from .tables.head import head,  ReadHeadTable
 from .tables.glyf import glyph, ReadGlyfTable
-#from .tables.cmap import cmap, ReadCmapTable
+from .tables.cmap import cmap,  ReadCmapTable
 
 class ParseTTF:
     def __init__(self, fontPath: str, loggingEnabled: bool = False):
@@ -22,7 +22,7 @@ class ParseTTF:
         self.offsetSubTable: offsetSubTable = ReadOffsetSubTable(self.reader)
         self.logger.log("Read Sub Table")
 
-        self.tables: dict[str, tableDirectory] = ReadTableDirectory(self.reader, self.offsetSubTable.numTables)
+        self.tables: dict[str, table] = ReadTableDirectory(self.reader, self.offsetSubTable.numTables)
         self.logger.log("Read Table Directory\n")
     
 
@@ -38,9 +38,9 @@ class ParseTTF:
         self.glyphs: list[glyph] = ReadGlyfTable(self.reader, self.head.indexToLocFormat, self.tables, self.maxp.numGlyphs)
         self.logger.log("Read 'glyf' Table")
 
-        #self.reader.goto(self.tables["cmap"].offset)
-        #self.cmap: cmap = ReadCmapTable(self.reader)
-        #self.log("Read 'cmap' table")
+        self.reader.goto(self.tables["cmap"].offset)
+        self.cmap: cmap = ReadCmapTable(self.reader, self.tables)
+        self.logger.log("Read 'cmap' table")
         
 
 
