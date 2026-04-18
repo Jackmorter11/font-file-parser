@@ -6,7 +6,7 @@ from .tables.offsetSubTable import offsetSubTable, ReadOffsetSubTable
 from .tables.tableDirectory import table         , ReadTableDirectory
 from .tables.maxp import maxp,  ReadMaxpTable
 from .tables.head import head,  ReadHeadTable
-from .tables.glyf import glyph, ReadGlyfTable
+from .tables.glyf import glyphData, ReadGlyfTable
 from .tables.cmap import cmap,  ReadCmapTable
 
 class ParseTTF:
@@ -35,7 +35,7 @@ class ParseTTF:
         self.logger.log("Read 'head' table")
 
         self.reader.goto(self.tables["glyf"].offset)
-        self.glyphs: list[glyph] = ReadGlyfTable(self.reader, self.head.indexToLocFormat, self.tables, self.maxp.numGlyphs)
+        self.glyphs: list[glyphData] = ReadGlyfTable(self.reader, self.head.indexToLocFormat, self.tables, self.maxp.numGlyphs)
         self.logger.log("Read 'glyf' Table")
 
         self.reader.goto(self.tables["cmap"].offset)

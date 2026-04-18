@@ -1,5 +1,12 @@
+"""
+Test each glyph in the font and see how many are read correctly
+NOTE: Might not check each glyph e.g. noto sans has 3,741 glyphs - google fonts
+but only prints Checked glyphs: 2642
+Might be not full reading the cmap table
+"""
+
 from fontTools.ttLib import TTFont
-from fontReader import ParseFont
+from fontReader import ParseTTF
 
 
 def isComposite(font, glyphName):
@@ -9,7 +16,7 @@ def isComposite(font, glyphName):
 
 def compareFonts(fontPath):
     ft = TTFont(fontPath)
-    myFont = ParseFont(fontPath)
+    myFont = ParseTTF(fontPath)
 
     glyfTable = ft["glyf"]
     glyphOrder = ft.getGlyphOrder()
@@ -62,6 +69,8 @@ def compareFonts(fontPath):
     return mismatches
 
 
-fontPath = "fonts/JetBrainsMono/fonts/ttf/JetBrainsMono-Bold.ttf"
+jetBrainsMono = "fonts/JetBrainsMono/fonts/ttf/JetBrainsMono-Bold.ttf"
+notoSans = "fonts/Noto_Sans/static/NotoSans-Bold.ttf"
+notoSansSymbols = "fonts/Noto_Sans_Symbols/static/NotoSansSymbols-Bold.ttf"
 
-compareFonts(fontPath)
+compareFonts(notoSans)

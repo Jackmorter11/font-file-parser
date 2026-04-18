@@ -1,193 +1,233 @@
 from dataclasses import dataclass, field
-from typing import Literal
 
 from ...common.reader import Reader
 from ..tables.tableDirectory import table
 
-@dataclass
-class point:
-    x       :float = 0
-    y       :float = 0
-    onCurve :bool  = False
+
+# Data structures
 
 @dataclass
-class glyph:
-    numberOfContours :int         = 0
-    numPoints        :int         = 0
-    endPtsOfContours :list[int]   = field(default_factory=list)
-    points           :list[point] = field(default_factory=list)
+class point:
+    x: float = 0
+    y: float = 0
+    onCurve: bool = False
+
+
+@dataclass
+class glyphData:
+    numberOfContours: int = 0
+    numPoints: int = 0
+    endPtsOfContours: list[int] = field(default_factory=list)
+    points: list[point] = field(default_factory=list)
 
     def __str__(self):
         string = ""
-
         startPoint = 0
+
         for endPoint in self.endPtsOfContours:
-            string += ", ".join(f"({point.x}, {point.y})" for point in self.points[startPoint:endPoint+1] + [self.points[startPoint]]) + "\n"
-            startPoint = endPoint+1
-        
+            contour = self.points[startPoint:endPoint + 1]
+            contour.append(self.points[startPoint])  # close contour
+
+            string += ", ".join(f"({p.x}, {p.y})" for p in contour) + "\n"
+            startPoint = endPoint + 1
+
         return string
 
 
-def ReadGlyfTable(reader: Reader, indexToLocFormat: int, tables: dict[str, table], numGlyphs: int) -> list[glyph]:
-    isTwoByteEntery: bool = indexToLocFormat == 0
-    locaTableStart = tables["loca"].offset
-    glyphTableStart = tables["glyf"].offset
+# Entry point
+def ReadGlyfTable(reader: Reader, indexToLocFormat: int, tables: dict[str, table], numGlyphs: int) -> list[glyphData]:
+    isShort = indexToLocFormat == 0
 
-    # Read glyph locations
-    allGlyphLocations: list[int] = []
-    for glyphIndex in range(numGlyphs):
-        reader.goto(locaTableStart + glyphIndex * (2 if isTwoByteEntery else 4))
+    locaStart = tables["loca"].offset
+    glyfStart = tables["glyf"].offset
 
-        # If 2-byte format is used, the stored location is half of actual location (so multiply by 2)
-        glyphDataOffset: int = reader.ReadUInt16() * 2 if isTwoByteEntery else reader.ReadUInt32()
-        allGlyphLocations.append(glyphTableStart + glyphDataOffset)
-    
-    # Read actual glyph data
-    glyphs: list[glyph] = []
-    for glyphLocation in allGlyphLocations:
-        reader.goto(glyphLocation)
-        glyphData = ReadGlyph(reader)
-        glyphs.append(glyphData)
-    
+    glyphLocations: list[int] = []
+
+    # Read loca table NOTE: Should be in tables/loca ?
+    for i in range(numGlyphs):
+        reader.goto(locaStart + i * (2 if isShort else 4))
+
+        offset = reader.ReadUInt16() * 2 if isShort else reader.ReadUInt32()
+        glyphLocations.append(glyfStart + offset)
+
+    # Read glyphs
+    glyphs: list[glyphData] = []
+
+    for loc in glyphLocations:
+        reader.goto(loc)
+        glyphs.append(ReadGlyph(reader, indexToLocFormat, tables))
+
     return glyphs
 
-def ReadGlyph(reader: Reader) -> glyph:
-    """
-    **Read a single glyph table from the current position**.
-    
-    Below is the start of the Glyph Table; the rest depends on if it is a simple or compound glyph
 
-    ```
-    Type      Name              Description
-    uint16    numberOfContours  If the number of contours is positive or zero, it is a single glyph
-                                If the number of contours less than zero, the glyph is compound
-    FWord     xMin              Minimum x for coordinate data
-    FWord     yMin              Minimum y for coordinate data
-    FWord     xMax              Maximum x for coordinate data
-    FWord     yMax              Maximum y for coordinate data
-    ```
-    """
+# Glyph readers
 
-    glyphData: glyph = glyph()
+def ReadGlyph(reader: Reader, indexToLocFormat: int, tables: dict[str, table]) -> glyphData:
+    glyph = glyphData()
 
-    glyphData.numberOfContours = reader.ReadInt16()
-    reader.SkipBytes(8) # Skip bounding box
+    glyph.numberOfContours = reader.ReadInt16()
+    reader.SkipBytes(8)  # bbox
 
-    if glyphData.numberOfContours >= 0:
-        return ReadSimpleGlyph(reader, glyphData)
+    if glyph.numberOfContours >= 0:
+        return ReadSimpleGlyph(reader, glyph)
     else:
-        return glyph()
+        return ReadCompoundGlyph(reader, glyph, indexToLocFormat, tables)
 
-def ReadSimpleGlyph(reader: Reader, glyphData: glyph) -> glyph:
-    """
-    **Read the rest of a simple glyph table from the current position**.
-    
-    Below is the rest of a simple Glyph Table
 
-    ```
-    Type      Name                             Description
-    uint16    endPtsOfContours[n]              Array of last points of each contour
-                                               n is the number of contours
-                                               array entries are point indices
-    uint16    instructionLength                Total number of bytes needed for instructions
-    uint8     instructions[instructionLength]  Array of instructions for this glyph
-    uint8     flags[variable]                  Array of flags
-    uint8/16  xCoordinates[]                   Array of x-coordinates; the first is relative to (0,0),
-                                               others are relative to previous point
-    uint8/16  yCoordinates[]                   Array of y-coordinates; the first is relative to (0,0),
-                                               others are relative to previous point
-    ```
-    """
+# Simple glyph
 
-    # Read numberOfContours amount of UInt16 values
-    # representing the contours and add them to list of contours
-    for _ in range(glyphData.numberOfContours):
-        glyphData.endPtsOfContours.append(reader.ReadUInt16())
+def ReadSimpleGlyph(reader: Reader, glyph: glyphData) -> glyphData:
 
-    # TODO: Use instructions
+    # Contours
+    for _ in range(glyph.numberOfContours):
+        glyph.endPtsOfContours.append(reader.ReadUInt16())
+
+    # Instructions
     instructionLength = reader.ReadUInt16()
     reader.SkipBytes(instructionLength)
-    
-    # Find number of points in simple glyph from last endPoint + 1
-    glyphData.numPoints = glyphData.endPtsOfContours[-1] + 1 if len(glyphData.endPtsOfContours) else 0
 
-    # List of flags, 1 byte for each point
-    allFlags: list[bytes] = []
-    # Read numPoints amount of Byte values
-    # representing the flags for each point
+    glyph.numPoints = glyph.endPtsOfContours[-1] + 1 if glyph.endPtsOfContours else 0
+
+    # Flags
+    flags: list[int] = []
     i = 0
-    while i < glyphData.numPoints:
-        flag: bytes = reader.ReadByte()
-        allFlags.append(flag)
+
+    while i < glyph.numPoints:
+        flag = reader.ReadByte()[0]
+        flags.append(flag)
         i += 1
 
-        # If repeat bit (3rd bit) is set, read next byte to determine num copies
-        # then add flag that many times
-        if FlagBitIsSet(flag, 3):
-            copies = reader.ReadByte()[0]
-            # Only add up to remaining points
-            remaining = glyphData.numPoints - i
-            actualCopies = min(copies, remaining)
+        # repeat flag
+        if flag & (1 << 3):
+            repeatCount = reader.ReadByte()[0]
+            for _ in range(min(repeatCount, glyph.numPoints - i)):
+                flags.append(flag)
+                i += 1
 
-            allFlags += [flag] * actualCopies
-            i += actualCopies
-        
-    # Read coordinates for glyph, onCurve is duplicated for both X and Y
-    coordsX, _ = ReadCoordinates(reader, allFlags, readingX=True)
-    coordsY, onCurve = ReadCoordinates(reader, allFlags, readingX=False)
-    for i in range(glyphData.numPoints):
-        glyphData.points.append(point(coordsX[i], coordsY[i], onCurve[i]))
+    # Coordinates
+    xs, _ = ReadCoordinates(reader, flags, True)
+    ys, onCurves = ReadCoordinates(reader, flags, False)
 
-    return glyphData
-    
-def ReadCoordinates(reader: Reader, allFlags: list[bytes], readingX: bool) -> tuple[list[int], list[bool]]:
-    """
-    Used in ReadSimpleGlyph(), reads the xCoordinates and yCoordinates arrays
-    """
+    for i in range(glyph.numPoints):
+        glyph.points.append(point(xs[i], ys[i], onCurves[i]))
 
-    offsetSizeFlagBit:   int = 1 if readingX else 2
-    offsetSignOrSkipBit: int = 4 if readingX else 5
+    return glyph
 
-    coordinates: list[int]  = []
-    onCurves:    list[bool] = []
-    
-    # Iterate through each point, convert to absolute coordinate and add to list
-    current: int = 0
-    for i in range(len(allFlags)):
-        # Coordinate is relative to previous value (0 for first coordinate)
-        flag: bytes = allFlags[i]
-        onCurves.append(FlagBitIsSet(flag, 0))
+def ReadCoordinates(reader: Reader, flags: list[int], readingX: bool):
+    coordinates = []
+    onCurves = []
 
-        # 1 byte offset (unsigned)
-        if FlagBitIsSet(flag, offsetSizeFlagBit):
-            offset: int = reader.ReadByte()[0]
-            if FlagBitIsSet(flag, offsetSignOrSkipBit):
-                current += offset   # positive
+    current = 0
+
+    sizeBit = 1 if readingX else 2
+    sameBit = 4 if readingX else 5
+
+    for flag in flags:
+        onCurves.append(bool(flag & 1))
+
+        if flag & (1 << sizeBit):
+            val = reader.ReadByte()[0]
+            if flag & (1 << sameBit):
+                current += val
             else:
-                current -= offset   # negative
-        
-        # 2 byte offset (signed)
-        # (Unless flag says to skip it and just kepp the coordinate the same)
-        elif not FlagBitIsSet(flag, offsetSignOrSkipBit):
-            current += reader.ReadInt16()
+                current -= val
+        else:
+            if not (flag & (1 << sameBit)):
+                current += reader.ReadInt16()
+            # else: delta = 0
 
         coordinates.append(current)
 
     return coordinates, onCurves
 
-# TODO: Compound Glyphs
 
-def FlagBitIsSet(flag: bytes, bitIndex: int) -> bool: # TODO: Maybe should be in common
-    """
-    **Test whether a particular bit in a byte is ON (1) or OFF (0)**
+# Compound glyph
 
-    * `flag`: The byte to check, has to be 1 byte long
+def ReadCompoundGlyph(reader: Reader, glyph: glyphData, indexToLocFormat: int, tables: dict[str, table]) -> glyphData:
 
-    * `bitIndex`: The index in the byte to check
-    """
+    allPoints: list[point] = []
+    allEndPts: list[int] = []
 
-    if len(flag) != 1:
-        raise ValueError("FlagByteIsSet(): Flag must be a single byte if using bytes")
-    
-    flagInt: int = flag[0] # Convert single byte to int
-    return ((flagInt >> bitIndex) & 1) == 1
+    while True:
+        component, isLast = ReadNextComponentGlyph(reader, indexToLocFormat, tables)
+
+        offset = len(allPoints)
+
+        allPoints.extend(component.points)
+
+        for endPt in component.endPtsOfContours:
+            allEndPts.append(endPt + offset)
+
+        if isLast:
+            break
+
+    glyph.points = allPoints
+    glyph.endPtsOfContours = allEndPts
+    glyph.numPoints = len(allPoints)
+
+    return glyph
+
+def ReadNextComponentGlyph(reader: Reader, indexToLocFormat: int, tables: dict[str, table]):
+
+    flags = reader.ReadUInt16()
+    glyphIndex = reader.ReadUInt16()
+
+    # Jump to component glyph
+    currentPos = reader.file.tell()
+    glyphLoc = GetGlyphLocation(reader, glyphIndex, indexToLocFormat, tables)
+
+    reader.goto(glyphLoc)
+    component = ReadGlyph(reader, indexToLocFormat, tables)
+    reader.goto(currentPos)
+
+    # Flags
+    ARG_WORDS = 0
+    ARGS_ARE_XY = 1
+    MORE_COMPONENTS = 5
+
+    if not (flags & (1 << ARGS_ARE_XY)):
+        raise NotImplementedError("Point matching not supported")
+
+    if flags & (1 << ARG_WORDS):
+        dx = reader.ReadInt16()
+        dy = reader.ReadInt16()
+    else:
+        dx = reader.ReadSByte()[0]
+        dy = reader.ReadSByte()[0]
+
+    # Scaling
+    scaleX = 1.0
+    scaleY = 1.0
+
+    if flags & (1 << 3):
+        scaleX = scaleY = reader.ReadFixedPoint2Dot14()
+    elif flags & (1 << 6):
+        scaleX = reader.ReadFixedPoint2Dot14()
+        scaleY = reader.ReadFixedPoint2Dot14()
+    elif flags & (1 << 7):
+        raise NotImplementedError("2x2 transform not supported")
+
+    # Transform
+    for p in component.points:
+        p.x = int(p.x * scaleX + dx)
+        p.y = int(p.y * scaleY + dy)
+
+    isLast = not (flags & (1 << MORE_COMPONENTS))
+
+    return component, isLast
+
+
+# Helpers
+
+def GetGlyphLocation(reader: Reader, glyphIndex: int, indexToLocFormat: int, tables: dict[str, table]) -> int:
+    locaStart = tables["loca"].offset
+    glyfStart = tables["glyf"].offset
+
+    if indexToLocFormat == 0:
+        reader.goto(locaStart + glyphIndex * 2)
+        offset = reader.ReadUInt16() * 2
+    else:
+        reader.goto(locaStart + glyphIndex * 4)
+        offset = reader.ReadUInt32()
+
+    return glyfStart + offset

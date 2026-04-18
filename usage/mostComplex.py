@@ -6,7 +6,7 @@ jetBrainsMono = "fonts/JetBrainsMono/fonts/ttf/JetBrainsMono-Bold.ttf"
 notoSans = "fonts/Noto_Sans/static/NotoSans-Bold.ttf"
 notoSansSymbols = "fonts/Noto_Sans_Symbols/static/NotoSansSymbols-Bold.ttf"
 
-font = ParseTTF(notoSansSymbols, loggingEnabled=True)
+font = ParseTTF(notoSans, loggingEnabled=True)
 
 maxPoints = 0
 mostComplexGlyph = -1

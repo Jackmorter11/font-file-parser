@@ -33,6 +33,9 @@ class Reader:
         data = self.file.read(1)
         return data
     
+    def ReadSByte(self) -> bytes:
+        return self.ReadByte() # NOTE: ReadSByte() might not be equivilant to ReadByte()
+
     def ReadInt16(self) -> int:
         """
         **Read Int16 from current position and move pointer forward 2 bytes**
@@ -104,6 +107,8 @@ class Reader:
         return data.decode(encoding)
     
 
+    def ReadFixedPoint2Dot14(self) -> float:
+        pass
 
 
 
