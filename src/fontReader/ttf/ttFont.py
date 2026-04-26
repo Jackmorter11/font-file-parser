@@ -4,16 +4,17 @@ from ..common.logger import Logger
 
 from .tables.offsetSubTable import offsetSubTable, ReadOffsetSubTable
 from .tables.tableDirectory import table         , ReadTableDirectory
-from .tables.maxp import maxp,  ReadMaxpTable
-from .tables.head import head,  ReadHeadTable
 from .tables.glyf import glyphData, ReadGlyfTable
-from .tables.cmap import cmap,  ReadCmapTable
+from .tables.maxp import maxp,      ReadMaxpTable
+from .tables.head import head,      ReadHeadTable
+from .tables.cmap import cmap,      ReadCmapTable
 
 class ParseTTF:
     def __init__(self, fontPath: str, loggingEnabled: bool = False):
         self.fontPath = fontPath
 
-        self.logger = Logger("logs/TTFParser.log", loggingEnabled=True)
+        self.logger = Logger("logs/TTFParser.log", loggingEnabled=loggingEnabled)
+        self.logger.log(f"Font path: {self.fontPath}")
 
         self.reader = Reader(self.fontPath)
         self.logger.log("Created reader object\n")
@@ -46,5 +47,5 @@ class ParseTTF:
 
 
     def __str__(self):
-        string = f"True Type Font object..."
+        string = f"True Type Font object... TODO: Name this"
         return string

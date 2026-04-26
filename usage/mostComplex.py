@@ -4,9 +4,10 @@ from fontReader import ParseFont, ParseTTF
 
 jetBrainsMono = "fonts/JetBrainsMono/fonts/ttf/JetBrainsMono-Bold.ttf"
 notoSans = "fonts/Noto_Sans/static/NotoSans-Bold.ttf"
+notoSansChinese = "fonts/Noto_Sans_Chinese/static/NotoSansTC-Regular.ttf"
 notoSansSymbols = "fonts/Noto_Sans_Symbols/static/NotoSansSymbols-Bold.ttf"
 
-font = ParseTTF(notoSans, loggingEnabled=True)
+font = ParseTTF(notoSansChinese, loggingEnabled=True)
 
 maxPoints = 0
 mostComplexGlyph = -1
@@ -15,4 +16,12 @@ for i, glyph in enumerate(font.glyphs):
         maxPoints = len(glyph.points)
         mostComplexGlyph = i
 
-print(font.glyphs[mostComplexGlyph])
+mostComplexGlyphCodepoint = -1
+for codepoint, glyph in font.cmap.mappings.items():
+    if glyph == mostComplexGlyph:
+        mostComplexGlyphCodepoint = codepoint
+
+glyph = font.glyphs[mostComplexGlyph]
+print(f"{chr(mostComplexGlyphCodepoint)} - {glyph.numberOfContours} contours:")
+print(glyph)
+

@@ -105,10 +105,6 @@ class Reader:
             data = data[::-1]
         
         return data.decode(encoding)
-    
-
-    def ReadFixedPoint2Dot14(self) -> float:
-        pass
 
 
 
