@@ -2,7 +2,7 @@ import logging
 import time
 
 class Logger:
-    def __init__(self, path: str, loggingEnabled: bool = False):
+    def __init__(self, path: str, loggingEnabled: bool):
         self.lastLogTime = time.time()
         self.loggingEnabled = loggingEnabled
 

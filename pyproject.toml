@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "font-file-parser"
-version = "0.1.0"
+version = "0.2.0"
 description = "TTF font reader for exposing glyph data"
 readme = "README.md"
 authors = [{ name="Jack Morter", email="jackmorter11@gmail.com" }]
