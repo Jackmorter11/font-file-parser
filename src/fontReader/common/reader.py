@@ -106,6 +106,11 @@ class Reader:
         
         return data.decode(encoding)
 
-
+    def ReadFixedPoint2Dot14(self) -> float:
+        """
+        Read a 2.14 fixed-point number e.g. 2.4
+        """
+        data = self.ReadInt16()
+        return data / 16384.0
 
 

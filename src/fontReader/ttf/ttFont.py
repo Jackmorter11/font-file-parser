@@ -4,10 +4,10 @@ from ..common.logger import Logger
 
 from .tables.offsetSubTable import offsetSubTable, ReadOffsetSubTable
 from .tables.tableDirectory import table         , ReadTableDirectory
-from .tables.glyf import glyphData, ReadGlyfTable
-from .tables.maxp import maxp,      ReadMaxpTable
-from .tables.head import head,      ReadHeadTable
-from .tables.cmap import cmap,      ReadCmapTable
+from .tables.glyf import glyfTable, ReadGlyfTable
+from .tables.maxp import maxpTable, ReadMaxpTable
+from .tables.head import headTable, ReadHeadTable
+from .tables.cmap import cmapTable, ReadCmapTable
 
 class ParseTTF:
     def __init__(self, fontPath: str, loggingEnabled: bool = False):
@@ -28,23 +28,24 @@ class ParseTTF:
     
 
         self.reader.goto(self.tables['maxp'].offset)
-        self.maxp: maxp = ReadMaxpTable(self.reader)
+        self.maxp: maxpTable = ReadMaxpTable(self.reader)
         self.logger.log("Read 'maxp' table")
 
         self.reader.goto(self.tables["head"].offset)
-        self.head: head = ReadHeadTable(self.reader)
+        self.head: headTable = ReadHeadTable(self.reader)
         self.logger.log("Read 'head' table")
 
         self.reader.goto(self.tables["glyf"].offset)
-        self.glyphs: list[glyphData] = ReadGlyfTable(self.reader, self.head.indexToLocFormat, self.tables, self.maxp.numGlyphs)
+        self.glyphs: glyfTable = ReadGlyfTable(self.reader, self.head.indexToLocFormat, self.tables, self.maxp.numGlyphs)
         self.logger.log("Read 'glyf' Table")
 
         self.reader.goto(self.tables["cmap"].offset)
-        self.cmap: cmap = ReadCmapTable(self.reader, self.tables)
+        self.cmap: cmapTable = ReadCmapTable(self.reader, self.tables)
         self.logger.log("Read 'cmap' table")
         
 
-
+    # When accessing glyphs with '.glyphs[glyphIndex]', load the glyph on demand
+    #def 
 
     def __str__(self):
         string = f"True Type Font object... TODO: Name this"

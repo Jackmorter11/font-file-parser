@@ -4,7 +4,7 @@ from ...common.reader import Reader
 from .tableDirectory import table
 
 @dataclass
-class cmap:
+class cmapTable:
     mappings: dict[int, int] = field(default_factory=dict)
 
     reserved:                          int = 0 
@@ -22,7 +22,7 @@ class cmap:
         return self.mappings.get(charCode, 0)
 
 
-def ReadCmapTable(reader: Reader, tables: dict[str, table]) -> cmap:
+def ReadCmapTable(reader: Reader, tables: dict[str, table]) -> cmapTable:
     cmapTableOffset: int = tables["cmap"].offset
     reader.goto(cmapTableOffset)
 
@@ -80,10 +80,10 @@ def ReadCmapTable(reader: Reader, tables: dict[str, table]) -> cmap:
         raise NotImplementedError(f"Cmap format {bestFormat} not implemented")
 
 
-def ReadCmapFormat12(reader: Reader) -> cmap:
+def ReadCmapFormat12(reader: Reader) -> cmapTable:
     format: int = reader.ReadUInt16()
 
-    table: cmap = cmap()
+    table: cmapTable = cmapTable()
     table.reserved                          = reader.ReadUInt16() # Set to 0
     table.subtableByteLengthIncludingHeader = reader.ReadUInt32()
     table.languageCode                      = reader.ReadUInt32() # Set to 0
@@ -104,7 +104,7 @@ def ReadCmapFormat12(reader: Reader) -> cmap:
     
     return table
 
-def ReadCmapFormat4(reader: Reader) -> cmap:
+def ReadCmapFormat4(reader: Reader) -> cmapTable:
     format = reader.ReadUInt16()
 
     length   = reader.ReadUInt16()
@@ -130,7 +130,7 @@ def ReadCmapFormat4(reader: Reader) -> cmap:
     # glyphIdArray starts here
     glyphArrayStart = reader.file.tell()
 
-    result = cmap(
+    result = cmapTable(
         reserved=reservedPad,
         subtableByteLengthIncludingHeader=length,
         languageCode=language,

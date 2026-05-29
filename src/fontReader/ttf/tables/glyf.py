@@ -12,15 +12,21 @@ class point:
     y: float = 0
     onCurve: bool = False
 
-
+# TODO: Call it glyph
 @dataclass
 class glyphData:
+    offset: int = -1
     numberOfContours: int = 0
     numPoints: int = 0
     endPtsOfContours: list[int] = field(default_factory=list)
     points: list[point] = field(default_factory=list)
 
     def __str__(self):
+        if not self.endPtsOfContours or not self.points:
+            return "Glyph not loaded yet"
+        
+        #print(f"DEBUG: __str__ for glyph\n    endPtsOfContours: {self.endPtsOfContours}\n    points: {self.points}\n")
+        
         string = ""
         startPoint = 0
 
@@ -33,29 +39,44 @@ class glyphData:
 
         return string
 
+class glyfTable:
+    def __init__(self, reader, tables, numGlyphs, indexToLocFormat):
+        self._reader = reader
+        self._tables = tables
+        self._numGlyphs = numGlyphs
+        self._indexToLocFormat = indexToLocFormat
+        self._offsets: dict[int, int] = {}     # Glyph index -> absolute file offset
+        self._cache: dict[int, glyphData] = {} # Glyph index -> glyphData
+
+    def __getitem__(self, index: int) -> glyphData:
+        #print(f"DEBUG: __getitem__ called for index {index}")
+        if index not in self._cache:
+            #print(f"DEBUG: Glyph not in cache, reading glyph")
+            self._reader.goto(self._offsets[index])
+            self._cache[index] = ReadGlyph(self._reader, self._indexToLocFormat, self._tables)
+
+        return self._cache[index]
+
+    def __len__(self):
+        return len(self._cache)
+    
 
 # Entry point
-def ReadGlyfTable(reader: Reader, indexToLocFormat: int, tables: dict[str, table], numGlyphs: int) -> list[glyphData]:
+def ReadGlyfTable(reader: Reader, indexToLocFormat: int, tables: dict[str, table], numGlyphs: int) -> glyfTable:
     isShort = indexToLocFormat == 0
+    glyphs: glyfTable = glyfTable(reader, tables, numGlyphs, indexToLocFormat)
 
     locaStart = tables["loca"].offset
     glyfStart = tables["glyf"].offset
 
-    glyphLocations: list[int] = []
-
-    # Read loca table NOTE: Should be in tables/loca ?
+    # Read loca table, populate offset array
+    # so glyphs can be loaded later on demand
     for i in range(numGlyphs):
         reader.goto(locaStart + i * (2 if isShort else 4))
+        locaOffset = reader.ReadUInt16() * 2 if isShort else reader.ReadUInt32()
 
-        offset = reader.ReadUInt16() * 2 if isShort else reader.ReadUInt32()
-        glyphLocations.append(glyfStart + offset)
-
-    # Read glyphs
-    glyphs: list[glyphData] = []
-
-    for loc in glyphLocations:
-        reader.goto(loc)
-        glyphs.append(ReadGlyph(reader, indexToLocFormat, tables))
+        # Using absolute offset into the file
+        glyphs._offsets[i] = glyfStart + locaOffset
 
     return glyphs
 
