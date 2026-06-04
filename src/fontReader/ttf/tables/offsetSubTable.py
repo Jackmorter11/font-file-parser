@@ -2,33 +2,43 @@ from dataclasses import dataclass
 
 from ...common.reader import Reader
 
+
 @dataclass
 class offsetSubTable:
-    scalerType    :int = 0
-    numTables     :int = 0
-    searchRange   :int = 0
-    entrySelector :int = 0
-    rangeShift    :int = 0
+    scalerType    :int = 0 # A tag to indicate the OFA scaler to be used to rasterize this font
+    numTables     :int = 0 # Number of tables
+    searchRange   :int = 0 # (maximum power of 2 <= numTables) * 16
+    entrySelector :int = 0 # log2(maximum power of 2 <= numTables)
+    rangeShift    :int = 0 # numTables * 16 - searchRange
+
+    def __str__(self) -> str:
+        """Human readable version of 'offset subtable'"""
+
+        lines = []
+        lines.append("offset subtable")
+        lines.append( "------------------------")
+        lines.append(f"scalerType    {self.scalerType:>10}")
+        lines.append(f"numTables     {self.numTables:>10}")
+        lines.append(f"searchRange   {self.searchRange:>10}")
+        lines.append(f"entrySelector {self.entrySelector:>10}")
+        lines.append(f"rangeShift    {self.rangeShift:>10}")
+        return "\n".join(lines)
+
 
 def ReadOffsetSubTable(reader: Reader) -> offsetSubTable:
     """
-    TODO: The offset subtable keeps record of the tables in the font and provides offset information to access each table in the directory
-    ```
-    Type      Name             Description
-    uint32    scalerType       A tag to indicate the OFA scaler to be used to rasterize this font
-    uint16    numTables        Number of tables
-    uint16    searchRange      (maximum power of 2 <= numTables) * 16
-    uint16    entrySelector    log2(maximum power of 2 <= numTables)
-    uint16    rangeShift       numTables * 16 - searchRange
-    ```
+    ### Reads the offsetSubTable from the current position
+
+    ---
+    The offsetSubTable keeps record of the tables in the font and provides offset information to access each table in the directory
     """
 
-    table: offsetSubTable = offsetSubTable()
-
-    table.scalerType    = reader.ReadUInt32()
-    table.numTables     = reader.ReadUInt16()
-    table.searchRange   = reader.ReadUInt16()
-    table.entrySelector = reader.ReadUInt16()
-    table.rangeShift    = reader.ReadUInt16()
+    table: offsetSubTable = offsetSubTable(
+        scalerType    = reader.ReadUInt32(),
+        numTables     = reader.ReadUInt16(),
+        searchRange   = reader.ReadUInt16(),
+        entrySelector = reader.ReadUInt16(),
+        rangeShift    = reader.ReadUInt16()
+    )
 
     return table

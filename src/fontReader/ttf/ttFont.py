@@ -1,52 +1,131 @@
+from typing import Callable
+import time
+
 from ..common.reader import Reader
-from ..common.glyph  import Glyph
 from ..common.logger import Logger
 
-from .tables.offsetSubTable import offsetSubTable, ReadOffsetSubTable
-from .tables.tableDirectory import table         , ReadTableDirectory
-from .tables.glyf import glyfTable, ReadGlyfTable
-from .tables.maxp import maxpTable, ReadMaxpTable
-from .tables.head import headTable, ReadHeadTable
-from .tables.cmap import cmapTable, ReadCmapTable
+from .tables.offsetSubTable import ReadOffsetSubTable
+from .tables.tableDirectory import readTableDirectory, Table
+#from .tables import cmap, glyf, head, hhea, hmtx, loca, maxp, name, post
+from .tables import cmap, glyf, head, maxp, name, loca
+
+
+TABLE_REGISTRY: list[tuple[str, str, Callable, Callable]] = [
+#     tag | self.name |              read function              | extra variables
+    ("head", "head",   lambda r, _:  head.readHeadTable(r),       lambda s: {}),
+    ("maxp", "maxp",   lambda r, _:  maxp.ReadMaxpTable(r),       lambda s: {}),
+    ("name", "name",   lambda r, _:  name.readNameTable(r),       lambda s: {}),
+    ("loca", "loca",   lambda r, kw: loca.readLocaTable(r, **kw), lambda s: {"indexToLocFormat": s.head._indexToLocFormat, "numGlyphs": s.maxp.numGlyphs}),
+    ("cmap", "cmap",   lambda r, kw: cmap.ReadCmapTable(r, **kw), lambda s: {"tables": s._tables}),
+    ("glyf", "glyphs", lambda r, kw: glyf.GlyfTable(r, **kw), lambda s: {"locaTable": s.loca})
+]
+
 
 class ParseTTF:
+    # TODO: Does this overwrite the classes?
+    # Set types for tables since they are loaded when available
+
     def __init__(self, fontPath: str, loggingEnabled: bool = False):
+        self.maxp:   maxp.maxpTable
+        self.head:   head.HeadTable
+        self.glyphs: dict[int, glyf.Glyph]
+        self.loca:   loca.LocaTable
+        self.cmap:   cmap.cmapTable
+        self.name:   name.NameTable
+
+
         self.fontPath = fontPath
 
         self.logger = Logger("logs/TTFParser.log", loggingEnabled=loggingEnabled)
-        self.logger.log(f"Font path: {self.fontPath}")
+        self.logger.timeLog(f"Font path: {self.fontPath}")
 
         self.reader = Reader(self.fontPath)
-        self.logger.log("Created reader object\n")
+        self.logger.timeLog("Created reader object\n")
 
 
-        self.offsetSubTable: offsetSubTable = ReadOffsetSubTable(self.reader)
-        self.logger.log("Read Sub Table")
+        self.offsetSubTable = ReadOffsetSubTable(self.reader)
+        self.logger.timeLog("Read Sub Table")
 
-        self.tables: dict[str, table] = ReadTableDirectory(self.reader, self.offsetSubTable.numTables)
-        self.logger.log("Read Table Directory\n")
-    
+        self.tableDirectory = readTableDirectory(self.reader, self.offsetSubTable.numTables)
+        self._tables = self.tableDirectory.tables #TODO: Is it worth doing this?
+        self.logger.timeLog("Read Table Directory\n")
 
-        self.reader.goto(self.tables['maxp'].offset)
-        self.maxp: maxpTable = ReadMaxpTable(self.reader)
-        self.logger.log("Read 'maxp' table")
 
-        self.reader.goto(self.tables["head"].offset)
-        self.head: headTable = ReadHeadTable(self.reader)
-        self.logger.log("Read 'head' table")
+        self.LoadTables()
 
-        self.reader.goto(self.tables["glyf"].offset)
-        self.glyphs: glyfTable = ReadGlyfTable(self.reader, self.head.indexToLocFormat, self.tables, self.maxp.numGlyphs)
-        self.logger.log("Read 'glyf' Table")
 
-        self.reader.goto(self.tables["cmap"].offset)
-        self.cmap: cmapTable = ReadCmapTable(self.reader, self.tables)
-        self.logger.log("Read 'cmap' table")
+        parsingTimems = int((time.time() - self.logger.startTime) * 1000)
+        self.logger.log(f"Parsing Complete in {parsingTimems} ms\n")
+
+
+    def LoadTables(self):
+        implemented = {tag for tag, *_ in TABLE_REGISTRY}
+
+        # Warn about tables in font that arnt implemented
+        for tag in self._tables:
+            if tag not in implemented:
+                self.logger.log(f"TODO: Implement '{tag}' table")
+        self.logger.blankLine()
+
+        # Read each table in order from the font
+        for tag, tableName, readTableFunction, extraArgs in TABLE_REGISTRY:
+            if tag in self._tables:
+                self.reader.goto(self._tables[tag].offset)
+
+                setattr(self, tableName, readTableFunction(self.reader, extraArgs(self)))
+                self.VerifyCheckSum(self._tables[tag])
+
+                self.logger.timeLog(f"Read '{tag}' table")
+        self.logger.blankLine()
+
+
+    def VerifyCheckSum(self, table: Table):
+        """
+        Calculate the checksum of the given table,
+        Compares it with set value
+
+        ---
+        If it isnt equal, throw
+        """
+
+        savedPos = self.reader.file.tell()
+        self.reader.goto(table.offset)
+        data = self.reader.file.read(table.length)
+        self.reader.goto(savedPos)
         
+        # head table: zero out checkSumAdjustment (bytes 8-11)
+        if table.tag == "head" and table.length >= 12:
+            data = data[:8] + b'\x00\x00\x00\x00' + data[12:]
+        
+        padded = data + b'\x00' * ((4 - len(data) % 4) % 4)
+        total = 0
+        for i in range(0, len(padded), 4):
+            total += int.from_bytes(padded[i:i+4], byteorder=self.reader.endian)
+        
+        if (total & 0xFFFFFFFF) != table.checkSum:
+            raise ValueError(f"{table.tag} table checksum mismatch, font possibly corrupted")
 
-    # When accessing glyphs with '.glyphs[glyphIndex]', load the glyph on demand
-    #def 
 
-    def __str__(self):
-        string = f"True Type Font object... TODO: Name this"
-        return string
+    def __str__(self) -> str:
+        """Return info about font"""
+
+        postScriptName = self.name.getName(6)
+        version        = self.name.getName(5)
+        description    = self.name.getName(10)
+        trademark      = self.name.getName(7)
+        fontCopyright  = self.name.getName(0)
+
+        lines = []
+
+        lines.append(f"{postScriptName} ({version})")
+        lines.append(description)
+        lines.append("")
+        lines.append(f"Path: {self.fontPath}")
+        lines.append("")
+        lines.append(f"{trademark}")
+        lines.append(f"{fontCopyright}")
+
+        # Remove None values
+        lines = [(line if line else '') for line in lines]
+
+        return "\n".join(lines)

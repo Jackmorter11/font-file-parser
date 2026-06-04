@@ -1,4 +1,6 @@
 from typing import Literal
+from datetime import datetime, timedelta
+
 
 class Reader:
     def __init__(self, fontPath: str):
@@ -29,11 +31,11 @@ class Reader:
         self.file.seek(offset, 0)
 
 
-    def ReadByte(self) -> bytes:
-        data = self.file.read(1)
+    def ReadByte(self) -> int:
+        data = self.file.read(1)[0]
         return data
     
-    def ReadSByte(self) -> bytes:
+    def ReadSByte(self) -> int:
         return self.ReadByte() # NOTE: ReadSByte() might not be equivilant to ReadByte()
 
     def ReadInt16(self) -> int:
@@ -106,11 +108,48 @@ class Reader:
         
         return data.decode(encoding)
 
+
     def ReadFixedPoint2Dot14(self) -> float:
         """
-        Read a 2.14 fixed-point number e.g. 2.4
+        Read a 2.14 fixed-point number e.g. 2.4345
         """
         data = self.ReadInt16()
         return data / 16384.0
 
+    def ReadFixedPoint16Dot16(self) -> float:
+        """
+        Read a 16.16 fixed-point number e.g. 2367.1357
+        """
+        data = self.ReadUInt32()
+        return data / 65536.0
 
+
+    def ReadLongDateTime(self) -> datetime:
+        """
+        **Read a 64-bit signed integer representing seconds since 1904-01-01**
+
+        ---
+        Throws **EOFError**: If there are not enough bytes left in the file
+        """
+        data = self.file.read(8)
+
+        if len(data) != 8:
+            raise EOFError(f"ReadLongDateTime(): Unexpected end of file, expected 8 bytes, got {len(data)}")
+        
+        seconds = int.from_bytes(data, byteorder=self.endian, signed=True)
+        macEpoch = datetime(1904, 1, 1)
+        return macEpoch + timedelta(seconds=seconds)
+    
+    def ReadFWord(self) -> int:
+        """
+        **Read a signed 16-bit integer in font units (FUnits)**
+        Throws **EOFError**: If there are not enough bytes left in the file
+        """
+        return self.ReadInt16()
+    
+    def ReadUFWord(self) -> int:
+        """
+        **Read an unsigned 16-bit integer in font units (FUnits)**
+        Throws **EOFError**: If there are not enough bytes left in the file
+        """
+        return self.ReadUInt16()

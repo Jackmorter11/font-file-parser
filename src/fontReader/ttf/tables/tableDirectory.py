@@ -1,38 +1,70 @@
+"""
+Functions to read 'table directory':
+
+- readTableDirectory(reader, numTables)
+"""
+
 from dataclasses import dataclass
 
 from ...common.reader import Reader
 
+
 @dataclass
-class table:
-    checkSum :int = 0
-    offset   :int = 0
-    length   :int = 0
-    
-def ReadTableDirectory(reader: Reader, numTables: int) -> dict[str, table]:
-    """  
-    ## Reads the Table Directory
+class Table:
+    """
+    Holds data for a table
 
-    ---
-    Which contains a list of the tables, each one of this form
-
-    ```
-    Type      Name        Description
-    uint32    tag         4-byte identifier
-    uint32    checkSum    checksum for this table
-    uint32    offset      offset from beginning of sfnt
-    uint32    length      length of this table in byte (actual length not padded length)
-    ```
+    - **tag**: 4-byte identifier of the table
+    - **checkSum**: Checksum for the table, to check integrity
+    - **offset**: Offset (in bytes) from begginning of file
+    - **length**: Length (in bytes) of the table
     """
 
-    tables: dict[str, table] = {}
+    tag      :str
+    checkSum :int
+    offset   :int
+    length   :int
+
+@dataclass
+class TableDirectory:
+    """
+    List of table enteries in font
+    """
+
+    tables: dict[str, Table]
+
+    def __str__(self) -> str:
+        """Human readable version of 'table directory'"""
+
+        lines = []
+        lines.append("Table Directory")
+        lines.append("-" * 43)
+        lines.append(" tag     checkSum       offset       length")
+
+        for table in self.tables.values():
+            lines.append(f"{table.tag}   {table.checkSum:>10}   {table.offset:>10}   {table.length:>10}")
+
+        return "\n".join(lines)
+
+
+def readTableDirectory(reader: Reader, numTables: int) -> TableDirectory:
+    """  
+    Reads the 'table directory'
+
+    The table directory contains a list of the table tags, checksum, offset and length
+    """
+
+    tables: dict[str, Table] = {}
 
     # Iterate through every table
     for _ in range(numTables):
-        tag:    str = reader.ReadStr32()
-        tables[tag] = table()
+        tag = reader.ReadStr32()
 
-        tables[tag].checkSum = reader.ReadUInt32()
-        tables[tag].offset   = reader.ReadUInt32()
-        tables[tag].length   = reader.ReadUInt32()
+        tables[tag] = Table(
+            tag      = tag,
+            checkSum = reader.ReadUInt32(),
+            offset   = reader.ReadUInt32(),
+            length   = reader.ReadUInt32()
+        )
 
-    return tables
+    return TableDirectory(tables)

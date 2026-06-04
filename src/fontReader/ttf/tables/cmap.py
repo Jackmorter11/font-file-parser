@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 
 from ...common.reader import Reader
-from .tableDirectory import table
+from .tableDirectory import Table
 
 @dataclass
 class cmapTable:
@@ -22,7 +22,7 @@ class cmapTable:
         return self.mappings.get(charCode, 0)
 
 
-def ReadCmapTable(reader: Reader, tables: dict[str, table]) -> cmapTable:
+def ReadCmapTable(reader: Reader, tables: dict[str, Table]) -> cmapTable:
     cmapTableOffset: int = tables["cmap"].offset
     reader.goto(cmapTableOffset)
 
