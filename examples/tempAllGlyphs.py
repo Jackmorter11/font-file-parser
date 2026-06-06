@@ -1,5 +1,5 @@
 """
-Example to print info about the font and summarys of the tables
+Temporary example to load every glyph for performance tests
 """
 from fontReader import ParseTTF
 
@@ -12,21 +12,5 @@ NOTO_SANS_SYMBOLS = "fonts/Noto_Sans_Symbols/static/NotoSansSymbols-Bold.ttf"
 
 font = ParseTTF(NOTO_SANS_CHINESE, loggingEnabled=True)
 
-print()
-print(font)
-
-print()
-print(font.offsetSubTable)
-print()
-print(font.tableDirectory)
-
-print()
-print(font.head)
-print()
-print(font.cmap)
-print()
-print(font.loca)
-print()
-print(font.name)
-print()
-print(font.maxp)
+for i in range(font.maxp.numGlyphs):
+    glyph = font.glyphs[i]

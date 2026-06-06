@@ -97,8 +97,8 @@ class NameTable:
         """Human readable version of 'name' table"""
 
         lines = []
-        lines.append(f"Name Table (format {self.format})")
-        lines.append("-" * len(lines[-1]))
+        lines.append(f"'name' Table (format {self.format})")
+        lines.append("")
 
         seen = set()
         for nameID, label in NAME_ID_LABELS.items():
@@ -113,6 +113,7 @@ class NameTable:
                 lines.append(f"nameID {nameID:<13} {value}")
                 seen.add(nameID)
 
+        lines[1] = "-" * len(lines[2])
         return "\n".join(lines)
 
 

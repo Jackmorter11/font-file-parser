@@ -28,7 +28,7 @@ class ParseTTF:
     def __init__(self, fontPath: str, loggingEnabled: bool = False):
         self.maxp:   maxp.maxpTable
         self.head:   head.HeadTable
-        self.glyphs: dict[int, glyf.Glyph]
+        self.glyphs: glyf.GlyfTable
         self.loca:   loca.LocaTable
         self.cmap:   cmap.cmapTable
         self.name:   name.NameTable

@@ -1,18 +1,19 @@
-from fontReader import ParseFont, ParseTTF
+"""
+Example to print the glyph data for every charicter in a sting
+"""
+from fontReader import ParseTTF
 
-jetBrainsMono = "fonts/JetBrainsMono/fonts/ttf/JetBrainsMono-Bold.ttf"
-notoSans = "fonts/Noto_Sans/static/NotoSans-Bold.ttf"
-notoSansChinese = "fonts/Noto_Sans_Chinese/static/NotoSansTC-Bold.ttf"
-notoSansSymbols = "fonts/Noto_Sans_Symbols/static/NotoSansSymbols-Bold.ttf"
 
-font = ParseTTF(jetBrainsMono, loggingEnabled=True)
+JETBRAINS_MONO = "fonts/JetBrainsMono/fonts/ttf/JetBrainsMono-Bold.ttf"
+NOTO_SANS = "fonts/Noto_Sans/static/NotoSans-Bold.ttf"
+NOTO_SANS_CHINESE = "fonts/Noto_Sans_Chinese/static/NotoSansTC-Bold.ttf"
+NOTO_SANS_SYMBOLS = "fonts/Noto_Sans_Symbols/static/NotoSansSymbols-Bold.ttf"
 
-text = "i"
-font.logger.timeLog("Starting loading string benchmark")
-for char in text:
+
+font = ParseTTF(NOTO_SANS_CHINESE, loggingEnabled=True)
+
+TEXT = "⇌"
+
+for char in TEXT:
     glyph = font.glyphs[font.cmap.CharToGlyphIndex(char)]
-    print(f"{char} - {glyph}\n")
-font.logger.timeLog("Finished loading string benchmark")
-font.logger.timeLog(f"Loaded {len(font.glyphs)} out of {font.maxp.numGlyphs} glyphs")
-
-print(font.name)
+    print(glyph)

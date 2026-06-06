@@ -12,11 +12,13 @@ class cmapTable:
     languageCode:                      int = 0
     numGroups:                         int = 0
 
+    def __str__(self) -> str:
+        return "TODO: 'cmap' summary"
 
     def CharToGlyphIndex(self, char: str) -> int:
         if len(char) != 1:
             raise ValueError(f"Expected string of length 1, not {len(char)}")
-        
+
         # Unicode value of character
         charCode = ord(char)
         return self.mappings.get(charCode, 0)

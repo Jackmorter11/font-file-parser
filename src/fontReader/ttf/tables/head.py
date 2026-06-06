@@ -56,6 +56,8 @@ class HeadTable:
         """Human readable version of 'head' table"""
 
         lines = []
+        lines.append("'head' table")
+        lines.append("-----------------------------")
         lines.append(f"version            {self.version:>10}")
         lines.append(f"fontRevision       {round(self.fontRevision, 3):>10}")
         lines.append(f"checkSumAdjustment {self._checkSumAdjustment:>10}")

@@ -20,7 +20,7 @@ class LocaTable:
     def __str__(self) -> str:
         lines = []
 
-        lines.append(f"Loca table ({len(self.offsets)} entries)")
+        lines.append(f"'loca' table ({len(self.offsets)} entries)")
         lines.append("-" * len(lines[-1]))
         lines.append(f"First {min(10, len(self.offsets))} entries:")
         for i in range(0, min(10, len(self.offsets))):

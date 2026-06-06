@@ -1,7 +1,10 @@
 """
 Funstions to read 'glyf' table:
 
-- readGlyfTable(reader)
+- GlyphTable(): Class to interact with glyf table
+- GlyphTable[glyphIndex]: Return glyph
+
+NOTE: Currently, if reading compound glyph, _cache holds the components and then the combined and transformed glyph
 """
 
 from dataclasses import dataclass, field
@@ -29,11 +32,16 @@ class Glyph:
     """
     Holds data for a glyph
 
-    - offset: Offset from start of 'glyf' table
     - numberOfContours: Number of contours in glyph
-    - numPoints: Number of points in whole glyph
-    - endPtsOfContours: The indexes of the points at the end of contours
-    - points: List of points in the whole glyph
+    - xMin: Minumum x cordinate (part of bounding box for glyph)
+    - yMin: Minumum y cordinate (part of bounding box for glyph)
+    - xMax: Maximum x cordinate (part of bounding box for glyph)
+    - yMax: Maximum y cordinate (part of bounding box for glyph)
+    - instructions: Byte array of instructions for glyph
+    - flags: Byte array of flags for glyph (used for reading)
+    - numPoints: Number of points in glyph
+    - endPtsOfContours: Index of the last point in each contour
+    - points: Flat list of points in glyph
     """
 
     numberOfContours: int = 0
@@ -42,10 +50,13 @@ class Glyph:
     xMax: int = 0
     yMax: int = 0
 
-    instructions = bytearray()
+    instructions: bytearray = field(default_factory=bytearray)
+    flags:        bytearray = field(default_factory=bytearray)
+
     numPoints: int = 0
-    endPtsOfContours: list[int] = field(default_factory=list)
-    points: list[Point] = field(default_factory=list)
+
+    endPtsOfContours:   list[int] = field(default_factory=list)
+    points:           list[Point] = field(default_factory=list)
 
     def __str__(self):
         if not self.endPtsOfContours or not self.points:
@@ -81,39 +92,47 @@ class GlyfTable:
         self._cache: dict[int, Glyph] = {} # Glyph index -> Glyph
 
     # Allow list indexing: 'font.glyphs[i]'
-    def __getitem__(self, index: int) -> Glyph:
-        if index not in self._cache:
-            self._reader.goto(self._locaTable.offsets[index] + self._glyfOffset)
-            self._cache[index] = self.readGlyph()
+    def __getitem__(self, glyphIndex: int) -> Glyph:
+        #if index not in self._cache:
+        #    self._reader.goto(self._locaTable.offsets[index] + self._glyfOffset)
+        #    self._cache[index] = self.readGlyph()
 
-        return self._cache[index]
+        return self.readGlyph(glyphIndex)
 
     def __len__(self):
         return len(self._cache)
 
 
-    def readGlyph(self) -> Glyph:
+    def readGlyph(self, glyphIndex: int) -> Glyph:
         """
-        Read and return a Glyph from the current position
+        Read and return a Glyph based on glyphIndex, add to cache
 
-        Reads simple/compund depending on numberOfContours
+        If the glyph is in cache it just returns that
         """
+
+        if glyphIndex in self._cache:
+            return self._cache[glyphIndex]
+
+        self._reader.goto(self._locaTable.offsets[glyphIndex] + self._glyfOffset)
 
         glyph = Glyph()
 
         glyph.numberOfContours = self._reader.ReadInt16()
+
         glyph.xMin = self._reader.ReadInt16()
         glyph.yMin = self._reader.ReadInt16()
         glyph.xMax = self._reader.ReadInt16()
         glyph.yMax = self._reader.ReadInt16()
 
         if glyph.numberOfContours >= 0:
-            return self.readSimpleGlyph(glyph)
+            self._cache[glyphIndex] = self.readSimpleGlyph(glyph)
+        else:
+            self._cache[glyphIndex] = self.readCompoundGlyph(glyph)
 
-        return self.readCompoundGlyph(glyph)
+        return self._cache[glyphIndex]
 
 
-    def readSimpleGlyph(self, glyph) -> Glyph:
+    def readSimpleGlyph(self, glyph: Glyph) -> Glyph:
         """
         Called by readGlyph(), reads the rest of a simple glyph
         """
@@ -122,32 +141,31 @@ class GlyfTable:
         for _ in range(glyph.numberOfContours):
             glyph.endPtsOfContours.append(self._reader.ReadUInt16())
 
-        # Read instructions
+        # Read instructions, TODO: Problem, bytearray has extra entrys, isnt cleared?
         instructionLength = self._reader.ReadUInt16()
         for _ in range(instructionLength):
-            glyph.instructions.append(self._reader.ReadUInt16())
+            glyph.instructions.append(self._reader.ReadByte())
 
         # Number of points in glyph based on last point of last contour
         glyph.numPoints = glyph.endPtsOfContours[-1] + 1 if glyph.endPtsOfContours else 0
 
         # Read flags (1 byte for each point)
-        flags = bytearray()
         i = 0
         while i < glyph.numPoints:
             flag = self._reader.ReadByte()
-            flags.append(flag)
+            glyph.flags.append(flag)
             i += 1
 
             # Repeat flag
             if flag & (1 << 3):
                 repeatCount = self._reader.ReadByte()
                 for _ in range(min(repeatCount, glyph.numPoints - i)):
-                    flags.append(flag)
+                    glyph.flags.append(flag)
                     i += 1
 
         # Read coordinates
-        xs, _ = self.readCoordinates(flags, True)
-        ys, onCurves = self.readCoordinates(flags, False)
+        xs, _ = self.readCoordinates(glyph.flags, True)
+        ys, onCurves = self.readCoordinates(glyph.flags, False)
         for i in range(glyph.numPoints):
             glyph.points.append(Point(xs[i], ys[i], onCurves[i]))
 
@@ -182,7 +200,7 @@ class GlyfTable:
                 else:
                     current -= val
 
-            # flag[1/2] == 0: Coordinate is 0 bytes long
+            # flag[1/2] == 0: Coordinate is 2 bytes long
             else:
                 # flag[4/5] == 0: Change in coordainte
                 if not flag & (1 << sameBit):
@@ -237,10 +255,7 @@ class GlyfTable:
 
         # Jump to component glyph
         currentPos = self._reader.file.tell()
-        glyphLoc = self._locaTable.offsets[glyphIndex] + self._glyfOffset
-
-        self._reader.goto(glyphLoc)
-        component = self.readGlyph()
+        component = self.readGlyph(glyphIndex)
         self._reader.goto(currentPos)
 
         # Flags
@@ -257,6 +272,8 @@ class GlyfTable:
         else:
             dx = self._reader.ReadSByte()
             dy = self._reader.ReadSByte()
+
+        # NOTE: Perfect transform
 
         # Scaling
         scaleX = 1.0
