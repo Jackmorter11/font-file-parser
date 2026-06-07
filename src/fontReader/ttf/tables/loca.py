@@ -1,15 +1,19 @@
 """
+The 'loca' table contains the offset (location) of each glyph
+
 Functions to read 'loca' table:
 
 - readLocaTable(reader)
 """
 
+from dataclasses import dataclass
+
 from ...common.reader import Reader
 
-
+@dataclass
 class LocaTable:
     """
-    Holds data for the 'loca' table:
+    Contains 'loca' table enteries
 
     - offsets: List of offsets to each glyph (realative to 'glyf' table)
     """

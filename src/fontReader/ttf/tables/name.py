@@ -1,11 +1,14 @@
 """
+The 'name' table contains human-readable names for features and settings,
+copyright notices, font names, style names, and other information
+
 Functions to read 'name' table:
 
-- readNameTable(reader)
-- NameTable.getName(nameID)
-- NameTable.getRecords()
-- NameTable.getCustomRecords()
-- NameTable.getLangTag(languageID)
+- readNameTable(reader) -> NameTable
+- NameTable.getName(nameID): Get name entry by nameID
+- NameTable.getRecords(): Get all name records
+- NameTable.getCustomRecords(): Get just custom records
+- NameTable.getLangTag(languageID): Get languageTag by languageID
 """
 
 from dataclasses import dataclass, field
@@ -74,7 +77,7 @@ class _NameRecord:
 @dataclass
 class NameTable:
     """
-    Holds data for 'name' table
+    Contains 'name' table enteries
 
     - format: Verison of the 'name' table \
         (format 1 extends 0 by adding support for custom language tag records)

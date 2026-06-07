@@ -1,10 +1,31 @@
+"""
+The 'cmap' table contains information to map each charicter to a glyphID
+
+Functions to read 'cmap' table:
+
+- readCmapTable(reader) -> CmapTable
+- CmapTable.charToGlyphIndex: Index in glyphs table coresponding to the charicter
+"""
+# TODO: Figure out how to handle all tables
+#       Also implement them
+
 from dataclasses import dataclass, field
 
 from ...common.reader import Reader
 from .tableDirectory import Table
 
 @dataclass
-class cmapTable:
+class CmapTable:
+    """
+    Contains 'cmap' table enteries
+
+    - mappings:
+    - reserved:
+    - subtableByteLengthIncludingHeader
+    - languageCode
+    - numGroups
+    """
+
     mappings: dict[int, int] = field(default_factory=dict)
 
     reserved:                          int = 0 
@@ -15,7 +36,7 @@ class cmapTable:
     def __str__(self) -> str:
         return "TODO: 'cmap' summary"
 
-    def CharToGlyphIndex(self, char: str) -> int:
+    def charToGlyphIndex(self, char: str) -> int:
         if len(char) != 1:
             raise ValueError(f"Expected string of length 1, not {len(char)}")
 
@@ -24,7 +45,7 @@ class cmapTable:
         return self.mappings.get(charCode, 0)
 
 
-def ReadCmapTable(reader: Reader, tables: dict[str, Table]) -> cmapTable:
+def readCmapTable(reader: Reader, tables: dict[str, Table]) -> CmapTable:
     cmapTableOffset: int = tables["cmap"].offset
     reader.goto(cmapTableOffset)
 
@@ -75,17 +96,17 @@ def ReadCmapTable(reader: Reader, tables: dict[str, Table]) -> cmapTable:
     reader.goto(cmapTableOffset + bestOffset)
 
     if bestFormat == 12:
-        return ReadCmapFormat12(reader)
+        return readCmapFormat12(reader)
     elif bestFormat == 4:
-        return ReadCmapFormat4(reader)
+        return readCmapFormat4(reader)
     else:
         raise NotImplementedError(f"Cmap format {bestFormat} not implemented")
 
 
-def ReadCmapFormat12(reader: Reader) -> cmapTable:
+def readCmapFormat12(reader: Reader) -> CmapTable:
     format: int = reader.ReadUInt16()
 
-    table: cmapTable = cmapTable()
+    table: CmapTable = CmapTable()
     table.reserved                          = reader.ReadUInt16() # Set to 0
     table.subtableByteLengthIncludingHeader = reader.ReadUInt32()
     table.languageCode                      = reader.ReadUInt32() # Set to 0
@@ -106,7 +127,7 @@ def ReadCmapFormat12(reader: Reader) -> cmapTable:
     
     return table
 
-def ReadCmapFormat4(reader: Reader) -> cmapTable:
+def readCmapFormat4(reader: Reader) -> CmapTable:
     format = reader.ReadUInt16()
 
     length   = reader.ReadUInt16()
@@ -132,7 +153,7 @@ def ReadCmapFormat4(reader: Reader) -> cmapTable:
     # glyphIdArray starts here
     glyphArrayStart = reader.file.tell()
 
-    result = cmapTable(
+    result = CmapTable(
         reserved=reservedPad,
         subtableByteLengthIncludingHeader=length,
         languageCode=language,

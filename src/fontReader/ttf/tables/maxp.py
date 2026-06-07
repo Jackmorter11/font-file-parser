@@ -1,25 +1,53 @@
+"""
+The 'maxp' table contains maximum profiles, to establish the memory requirements, for a font
+
+Functions to read 'maxp' table:
+
+- readMaxpTable() -> MaxpTable
+"""
+
 from dataclasses import dataclass
 
 from ...common.reader import Reader
 
 
 @dataclass
-class maxpTable:
-    version               :float # 0x00010000 (1.0)
-    numGlyphs             :int   # the number of glyphs in the font
-    maxPoints             :int   # points in non-compound glyph
-    maxContours           :int   # contours in non-compound glyph
-    maxComponentPoints    :int   # points in compound glyph
-    maxComponentContours  :int   # contours in compound glyph
-    maxZones              :int   # set to 2
-    maxTwilightPoints     :int   # points used in Twilight Zone (Z0)
-    maxStorage            :int   # number of Storage Area locations
-    maxFunctionDefs       :int   # number of FDEFs
-    maxInstructionDefs    :int   # number of IDEFs
-    maxStackElements      :int   # maximum stack depth
-    maxSizeOfInstructions :int   # byte count for glyph instructions
-    maxComponentElements  :int   # number of glyphs referenced at top level
-    maxComponentDepth     :int   # levels of recursion, set to 0 if font has only simple glyphs
+class MaxpTable:
+    """
+    Contains 'maxp' table enteries
+
+    - version: Always 0x00010000 (1.0)
+    - numGlyphs: The number of glyphs in the font
+    - maxPoints: Max points in non-compound glyph
+    - maxContours: Max contours in non-compound glyph
+    - maxComponentPoints: Max points in compound glyph
+    - maxComponentContours: Max contours in compound glyph
+    - maxZones: Set to 2
+    - maxTwilightPoints: Max points used in Twilight Zone (Z0)
+    - maxStorage: Max number of Storage Area locations
+    - maxFunctionDefs: Max number of FDEFs
+    - maxInstructionDefs: Max number of IDEFs
+    - maxStackElements: Max maximum stack depth
+    - maxSizeOfInstruction: Max byte count for glyph instructions
+    - maxComponentElements: Max number of glyphs referenced at top level
+    - maxComponentDepth: Max levels of recursion, set to 0 if font has only simple glyphs
+    """
+
+    version               :float
+    numGlyphs             :int
+    maxPoints             :int
+    maxContours           :int
+    maxComponentPoints    :int
+    maxComponentContours  :int
+    maxZones              :int
+    maxTwilightPoints     :int
+    maxStorage            :int
+    maxFunctionDefs       :int
+    maxInstructionDefs    :int
+    maxStackElements      :int
+    maxSizeOfInstructions :int
+    maxComponentElements  :int
+    maxComponentDepth     :int
 
     def __str__(self) -> str:
         """Human readable version of 'maxp" table"""
@@ -46,15 +74,14 @@ class maxpTable:
         return "\n".join(lines)
 
 
-def ReadMaxpTable(reader: Reader) -> maxpTable:
+def readMaxpTable(reader: Reader) -> MaxpTable:
     """
-    ### Reads the 'maxp' table from the current position
+    Reads the 'maxp' table
     
-    ---
     The 'maxp' table establishes the memory requirements for a font
     """
 
-    table: maxpTable = maxpTable(
+    table: MaxpTable = MaxpTable(
         version               = reader.ReadFixedPoint16Dot16(),
         numGlyphs             = reader.ReadUInt16(),
         maxPoints             = reader.ReadUInt16(),

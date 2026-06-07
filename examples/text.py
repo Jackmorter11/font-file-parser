@@ -15,5 +15,5 @@ font = ParseTTF(NOTO_SANS_CHINESE, loggingEnabled=True)
 TEXT = "⇌"
 
 for char in TEXT:
-    glyph = font.glyphs[font.cmap.CharToGlyphIndex(char)]
+    glyph = font.glyphs[font.cmap.charToGlyphIndex(char)]
     print(glyph)

@@ -1,7 +1,9 @@
 """
+The 'head' table contains global information about the font
+
 Functions to read 'head' table:
 
-- readHeadTable(reader)
+- readHeadTable(reader) -> HeadTable
 """
 
 from dataclasses import dataclass
@@ -13,7 +15,7 @@ from ...common.reader import Reader
 @dataclass
 class HeadTable:
     """
-    Holds data for 'head' table
+    Contains 'head' table enteries
 
     - version: Version of the head table, should always be 1.0
     - fontRevision: The font designer's version number for the font

@@ -4,7 +4,7 @@ import time
 from ..common.reader import Reader
 from ..common.logger import Logger
 
-from .tables.offsetSubTable import ReadOffsetSubTable
+from .tables.offsetSubTable import readOffsetSubTable
 from .tables.tableDirectory import readTableDirectory, Table
 #from .tables import cmap, glyf, head, hhea, hmtx, loca, maxp, name, post
 from .tables import cmap, glyf, head, maxp, name, loca
@@ -13,24 +13,23 @@ from .tables import cmap, glyf, head, maxp, name, loca
 TABLE_REGISTRY: list[tuple[str, str, Callable, Callable]] = [
 #     tag | self.name |              read function              | extra variables
     ("head", "head",   lambda r, _:  head.readHeadTable(r),       lambda s: {}),
-    ("maxp", "maxp",   lambda r, _:  maxp.ReadMaxpTable(r),       lambda s: {}),
+    ("maxp", "maxp",   lambda r, _:  maxp.readMaxpTable(r),       lambda s: {}),
     ("name", "name",   lambda r, _:  name.readNameTable(r),       lambda s: {}),
     ("loca", "loca",   lambda r, kw: loca.readLocaTable(r, **kw), lambda s: {"indexToLocFormat": s.head._indexToLocFormat, "numGlyphs": s.maxp.numGlyphs}),
-    ("cmap", "cmap",   lambda r, kw: cmap.ReadCmapTable(r, **kw), lambda s: {"tables": s._tables}),
+    ("cmap", "cmap",   lambda r, kw: cmap.readCmapTable(r, **kw), lambda s: {"tables": s.tables}),
     ("glyf", "glyphs", lambda r, kw: glyf.GlyfTable(r, **kw), lambda s: {"locaTable": s.loca})
 ]
 
 
 class ParseTTF:
-    # TODO: Does this overwrite the classes?
-    # Set types for tables since they are loaded when available
-
     def __init__(self, fontPath: str, loggingEnabled: bool = False):
-        self.maxp:   maxp.maxpTable
+        # TODO: Does this overwrite the classes?
+        # Set types for tables since they are loaded when available
+        self.maxp:   maxp.MaxpTable
         self.head:   head.HeadTable
         self.glyphs: glyf.GlyfTable
         self.loca:   loca.LocaTable
-        self.cmap:   cmap.cmapTable
+        self.cmap:   cmap.CmapTable
         self.name:   name.NameTable
 
 
@@ -43,37 +42,36 @@ class ParseTTF:
         self.logger.timeLog("Created reader object\n")
 
 
-        self.offsetSubTable = ReadOffsetSubTable(self.reader)
+        self.offsetSubTable = readOffsetSubTable(self.reader)
         self.logger.timeLog("Read Sub Table")
 
-        self.tableDirectory = readTableDirectory(self.reader, self.offsetSubTable.numTables)
-        self._tables = self.tableDirectory.tables #TODO: Is it worth doing this?
+        self.tables = readTableDirectory(self.reader, self.offsetSubTable.numTables)
         self.logger.timeLog("Read Table Directory\n")
 
 
-        self.LoadTables()
+        self.loadTables()
 
 
         parsingTimems = int((time.time() - self.logger.startTime) * 1000)
         self.logger.log(f"Parsing Complete in {parsingTimems} ms\n")
 
 
-    def LoadTables(self):
+    def loadTables(self):
         implemented = {tag for tag, *_ in TABLE_REGISTRY}
 
         # Warn about tables in font that arnt implemented
-        for tag in self._tables:
+        for tag in self.tables.tags():
             if tag not in implemented:
                 self.logger.log(f"TODO: Implement '{tag}' table")
         self.logger.blankLine()
 
         # Read each table in order from the font
         for tag, tableName, readTableFunction, extraArgs in TABLE_REGISTRY:
-            if tag in self._tables:
-                self.reader.goto(self._tables[tag].offset)
+            if tag in self.tables.tags():
+                self.reader.goto(self.tables[tag].offset)
 
                 setattr(self, tableName, readTableFunction(self.reader, extraArgs(self)))
-                self.VerifyCheckSum(self._tables[tag])
+                self.VerifyCheckSum(self.tables[tag])
 
                 self.logger.timeLog(f"Read '{tag}' table")
         self.logger.blankLine()

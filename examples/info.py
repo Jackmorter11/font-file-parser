@@ -1,6 +1,7 @@
 """
-Example to print info about the font and summarys of the tables
+Example to print general info about the font and summaries of the tables
 """
+
 from fontReader import ParseTTF
 
 
@@ -18,7 +19,7 @@ print(font)
 print()
 print(font.offsetSubTable)
 print()
-print(font.tableDirectory)
+print(font.tables)
 
 print()
 print(font.head)

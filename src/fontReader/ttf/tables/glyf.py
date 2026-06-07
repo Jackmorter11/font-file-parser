@@ -1,10 +1,13 @@
 """
-Funstions to read 'glyf' table:
+The 'glyf' table contains the data for each glyph in the font
 
-- GlyphTable(): Class to interact with glyf table
-- GlyphTable[glyphIndex]: Return glyph
+Functions to read 'glyf' table:
 
-NOTE: Currently, if reading compound glyph, _cache holds the components and then the combined and transformed glyph
+- GlyphTable(): Interact with glyf table
+- GlyphTable[glyphIndex]: Read and return glyph
+
+NOTE: Currently, if reading compound glyph, _cache holds the components as well as the combined and transformed glyph
+      It is probably better to store references to all the components
 """
 
 from dataclasses import dataclass, field
@@ -30,7 +33,7 @@ class Point:
 @dataclass
 class Glyph:
     """
-    Holds data for a glyph
+    Contains 'glyf' table enteries
 
     - numberOfContours: Number of contours in glyph
     - xMin: Minumum x cordinate (part of bounding box for glyph)
@@ -76,7 +79,7 @@ class Glyph:
 
 class GlyfTable:
     """
-    Holds data for 'glyf' table:
+    Contains 'glyf' table enteries
 
     - _reader: Reader reference (to load glyphs on demand)
     - _locaTable: Loca table reference (to load glyphs on demand)
@@ -93,10 +96,6 @@ class GlyfTable:
 
     # Allow list indexing: 'font.glyphs[i]'
     def __getitem__(self, glyphIndex: int) -> Glyph:
-        #if index not in self._cache:
-        #    self._reader.goto(self._locaTable.offsets[index] + self._glyfOffset)
-        #    self._cache[index] = self.readGlyph()
-
         return self.readGlyph(glyphIndex)
 
     def __len__(self):

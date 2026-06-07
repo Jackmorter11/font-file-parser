@@ -1,5 +1,5 @@
 """
-Temporary example to load every glyph for performance tests
+Example to load every glyph for performance tests
 """
 from fontReader import ParseTTF
 
@@ -12,5 +12,10 @@ NOTO_SANS_SYMBOLS = "fonts/Noto_Sans_Symbols/static/NotoSansSymbols-Bold.ttf"
 
 font = ParseTTF(NOTO_SANS_CHINESE, loggingEnabled=True)
 
+font.logger.blankLine()
+font.logger.timeLog("Started loading all glyphs")
+
 for i in range(font.maxp.numGlyphs):
     glyph = font.glyphs[i]
+
+font.logger.timeLog("Finished loading all glyphs")

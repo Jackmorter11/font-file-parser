@@ -1,7 +1,12 @@
 """
+The table directory contains informatioan about each table;
+tag, checkSum, offset and length
+
 Functions to read 'table directory':
 
-- readTableDirectory(reader, numTables)
+- readTableDirectory(reader, numTables) -> TableDirectory
+- TableDirectory[tag]: Return table with that tag
+- TableDirectory.tags(): Return list of tags
 """
 
 from dataclasses import dataclass
@@ -14,10 +19,10 @@ class Table:
     """
     Holds data for a table
 
-    - **tag**: 4-byte identifier of the table
-    - **checkSum**: Checksum for the table, to check integrity
-    - **offset**: Offset (in bytes) from begginning of file
-    - **length**: Length (in bytes) of the table
+    - tag: 4-byte identifier of the table
+    - checkSum: Checksum for the table, to check integrity
+    - offset: Offset (in bytes) from begginning of file
+    - length: Length (in bytes) of the table
     """
 
     tag      :str
@@ -28,10 +33,11 @@ class Table:
 @dataclass
 class TableDirectory:
     """
-    List of table enteries in font
+    Contains a list of table enteries in font
     """
 
     tables: dict[str, Table]
+
 
     def __str__(self) -> str:
         """Human readable version of 'table directory'"""
@@ -45,6 +51,15 @@ class TableDirectory:
             lines.append(f"{table.tag}   {table.checkSum:>10}   {table.offset:>10}   {table.length:>10}")
 
         return "\n".join(lines)
+
+    def __getitem__(self, tag: str) -> Table:
+        return self.tables[tag]
+
+
+    def tags(self) -> list[str]:
+        """Return list of tags"""
+
+        return list(self.tables.keys())
 
 
 def readTableDirectory(reader: Reader, numTables: int) -> TableDirectory:
