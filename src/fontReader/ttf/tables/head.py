@@ -51,7 +51,7 @@ class HeadTable:
     macStyle            :int
     lowestRecPPEM       :int
     _fontDirectionHint  :int
-    _indexToLocFormat   :int
+    indexToLocFormat   :int
     _glyphDataFormat    :int
 
     def __str__(self):
@@ -75,7 +75,7 @@ class HeadTable:
         lines.append(f"macStyle           {self.macStyle:>10}")
         lines.append(f"lowestRecPPEM      {self.lowestRecPPEM:>10}")
         lines.append(f"fontDirectionHint  {self._fontDirectionHint:>10}")
-        lines.append(f"indexToLocFormat   {self._indexToLocFormat:>10}")
+        lines.append(f"indexToLocFormat   {self.indexToLocFormat:>10}")
         lines.append(f"glyphDataFormat    {self._glyphDataFormat:>10}")
         return "\n".join(lines)
 
@@ -126,6 +126,6 @@ def readHeadTable(reader: Reader) -> HeadTable:
         macStyle            = macStyle,
         lowestRecPPEM       = lowestRecPPEM,
         _fontDirectionHint  = _fontDirectionHint,
-        _indexToLocFormat   = _indexToLocFormat,
+        indexToLocFormat   = _indexToLocFormat,
         _glyphDataFormat    = _glyphDataFormat
     )

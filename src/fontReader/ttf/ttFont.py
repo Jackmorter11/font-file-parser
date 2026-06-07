@@ -1,5 +1,6 @@
 from typing import Callable
 import time
+import struct
 
 from ..common.reader import Reader
 from ..common.logger import Logger
@@ -15,7 +16,7 @@ TABLE_REGISTRY: list[tuple[str, str, Callable, Callable]] = [
     ("head", "head",   lambda r, _:  head.readHeadTable(r),       lambda s: {}),
     ("maxp", "maxp",   lambda r, _:  maxp.readMaxpTable(r),       lambda s: {}),
     ("name", "name",   lambda r, _:  name.readNameTable(r),       lambda s: {}),
-    ("loca", "loca",   lambda r, kw: loca.readLocaTable(r, **kw), lambda s: {"indexToLocFormat": s.head._indexToLocFormat, "numGlyphs": s.maxp.numGlyphs}),
+    ("loca", "loca",   lambda r, kw: loca.readLocaTable(r, **kw), lambda s: {"indexToLocFormat": s.head.indexToLocFormat, "numGlyphs": s.maxp.numGlyphs}),
     ("cmap", "cmap",   lambda r, kw: cmap.readCmapTable(r, **kw), lambda s: {"tables": s.tables}),
     ("glyf", "glyphs", lambda r, kw: glyf.GlyfTable(r, **kw), lambda s: {"locaTable": s.loca})
 ]
@@ -71,35 +72,42 @@ class ParseTTF:
                 self.reader.goto(self.tables[tag].offset)
 
                 setattr(self, tableName, readTableFunction(self.reader, extraArgs(self)))
-                self.VerifyCheckSum(self.tables[tag])
+                self.verifyCheckSum(self.tables[tag])
 
                 self.logger.timeLog(f"Read '{tag}' table")
         self.logger.blankLine()
 
 
-    def VerifyCheckSum(self, table: Table):
+    def verifyCheckSum(self, table: Table):
         """
         Calculate the checksum of the given table,
         Compares it with set value
-
-        ---
-        If it isnt equal, throw
+    
+        If it isnt equal, throw error
         """
 
         savedPos = self.reader.file.tell()
         self.reader.goto(table.offset)
         data = self.reader.file.read(table.length)
         self.reader.goto(savedPos)
-        
+
         # head table: zero out checkSumAdjustment (bytes 8-11)
         if table.tag == "head" and table.length >= 12:
             data = data[:8] + b'\x00\x00\x00\x00' + data[12:]
-        
+
         padded = data + b'\x00' * ((4 - len(data) % 4) % 4)
-        total = 0
-        for i in range(0, len(padded), 4):
-            total += int.from_bytes(padded[i:i+4], byteorder=self.reader.endian)
-        
+
+        # Determine the struct format string based on endianness ('>' for big, '<' for little)
+        # TTF standard is big endian ('>'), 'I' means Unsigned 32-bit Int
+        endianFlag = ">" if self.reader.endian == "big" else "<"
+
+        # Calculate how many 4-byte integers are in the padded data
+        numIntegers = len(padded) // 4
+        fmt = f"{endianFlag}{numIntegers}I"
+
+        # Unpack the entire table into a Python tuple of numbers
+        total = sum(struct.unpack(fmt, padded))
+
         if (total & 0xFFFFFFFF) != table.checkSum:
             raise ValueError(f"{table.tag} table checksum mismatch, font possibly corrupted")
 
